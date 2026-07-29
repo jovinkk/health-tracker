@@ -11,11 +11,13 @@ api.interceptors.request.use((config) => {
   return config
 })
 
-// Redirect to login on 401
+// Redirect to login on 401 — but not when the 401 is the login attempt itself,
+// which needs to surface the error inline instead of reloading the page
 api.interceptors.response.use(
   (r) => r,
   (err) => {
-    if (err.response?.status === 401) {
+    const isAuthAttempt = /\/auth\/(login|register)$/.test(err.config?.url || '')
+    if (err.response?.status === 401 && !isAuthAttempt) {
       localStorage.removeItem('token')
       window.location.href = '/login'
     }
