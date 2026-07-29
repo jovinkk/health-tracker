@@ -7,6 +7,7 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.*
+import java.util.concurrent.TimeUnit
 
 // ── Data models ───────────────────────────────────────────────────────────────
 
@@ -105,8 +106,14 @@ interface ApiService {
             val logging = HttpLoggingInterceptor().apply {
                 level = HttpLoggingInterceptor.Level.BODY
             }
+            // The backend runs on a free Render instance that sleeps after ~15
+            // minutes idle and takes up to a minute to wake, so the 10s OkHttp
+            // defaults would time out on the first request every time.
             val client = OkHttpClient.Builder()
                 .addInterceptor(logging)
+                .connectTimeout(30, TimeUnit.SECONDS)
+                .readTimeout(90, TimeUnit.SECONDS)
+                .writeTimeout(30, TimeUnit.SECONDS)
                 .build()
             return Retrofit.Builder()
                 .baseUrl(BuildConfig.API_BASE_URL + "/")

@@ -11,6 +11,7 @@ import androidx.lifecycle.lifecycleScope
 import com.healthtracker.app.HealthTrackerApp
 import com.healthtracker.app.data.remote.CredentialsRequest
 import com.healthtracker.app.databinding.FragmentSettingsBinding
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
 
@@ -67,6 +68,7 @@ class SettingsFragment : Fragment() {
     private fun login(username: String, password: String) {
         val app = requireActivity().application as HealthTrackerApp
         lifecycleScope.launch {
+            setBusy(true)
             try {
                 if (authenticate(app, username, password)) {
                     toast("Login successful")
@@ -86,10 +88,31 @@ class SettingsFragment : Fragment() {
                 } else {
                     toast("Account created, but sign-in failed")
                 }
+            } catch (e: CancellationException) {
+                // Leaving the screen mid-request is not a login failure
+                throw e
             } catch (e: Exception) {
                 toast("Login failed: ${e.message}")
+                setStatus("Not logged in", android.R.color.holo_orange_dark)
+            } finally {
+                setBusy(false)
             }
         }
+    }
+
+    /** Disables the button and warns that a sleeping free-tier backend can take a while to wake. */
+    private fun setBusy(busy: Boolean) {
+        val binding = _binding ?: return
+        binding.btnLogin.isEnabled = !busy
+        if (busy) {
+            setStatus("Signing in… server may take up to a minute to wake", android.R.color.holo_orange_dark)
+        }
+    }
+
+    private fun setStatus(text: String, colorRes: Int) {
+        val binding = _binding ?: return
+        binding.textStatus.text = text
+        binding.textStatus.setTextColor(resources.getColor(colorRes, null))
     }
 
     /** Signs in and persists the token. Returns false on a 401; other failures propagate. */
@@ -104,13 +127,13 @@ class SettingsFragment : Fragment() {
             .putString("token", response.accessToken)
             .putString("username", username)
             .apply()
-        binding.textStatus.text = "Logged in as $username"
-        binding.textStatus.setTextColor(resources.getColor(android.R.color.holo_green_dark, null))
+        setStatus("Logged in as $username", android.R.color.holo_green_dark)
         return true
     }
 
     private fun toast(message: String) {
-        Toast.makeText(requireContext(), message, Toast.LENGTH_LONG).show()
+        val context = context ?: return
+        Toast.makeText(context, message, Toast.LENGTH_LONG).show()
     }
 
     private fun requestHealthPermissions() {
