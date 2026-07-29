@@ -2,6 +2,7 @@ services:
   - type: web
     name: health-tracker-api
     runtime: python
+    plan: free
     rootDir: backend
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
@@ -9,10 +10,6 @@ services:
       - key: SECRET_KEY
         generateValue: true
       - key: DATABASE_URL
-        value: sqlite:////data/health_tracker.db
+        value: sqlite:///./health_tracker.db
       - key: ALLOWED_ORIGINS
         value: https://health-tracker-web.vercel.app
-    disk:
-      name: sqlite-data
-      mountPath: /data
-      sizeGB: 1
