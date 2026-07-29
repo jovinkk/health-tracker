@@ -14,4 +14,4 @@ services:
       - key: DATABASE_URL
         value: sqlite:///./health_tracker.db
       - key: ALLOWED_ORIGINS
-        value: https://health-tracker-web.vercel.app
+        value: https://health-tracker-kappa-six.vercel.app
