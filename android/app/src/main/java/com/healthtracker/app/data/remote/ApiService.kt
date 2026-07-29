@@ -10,10 +10,15 @@ import retrofit2.http.*
 
 // ── Data models ───────────────────────────────────────────────────────────────
 
-data class LoginRequest(val username: String, val password: String)
+data class CredentialsRequest(val username: String, val password: String)
 data class TokenResponse(
     @SerializedName("access_token") val accessToken: String,
     @SerializedName("token_type") val tokenType: String,
+)
+data class UserResponse(
+    val id: Long,
+    val username: String,
+    @SerializedName("created_at") val createdAt: String,
 )
 
 data class HealthEntryRequest(
@@ -73,6 +78,9 @@ interface ApiService {
         @Field("username") username: String,
         @Field("password") password: String,
     ): TokenResponse
+
+    @POST("auth/register")
+    suspend fun register(@Body credentials: CredentialsRequest): UserResponse
 
     @POST("entries")
     suspend fun createEntry(

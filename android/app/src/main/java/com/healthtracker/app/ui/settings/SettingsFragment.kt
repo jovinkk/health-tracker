@@ -9,8 +9,10 @@ import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.healthtracker.app.HealthTrackerApp
+import com.healthtracker.app.data.remote.CredentialsRequest
 import com.healthtracker.app.databinding.FragmentSettingsBinding
 import kotlinx.coroutines.launch
+import retrofit2.HttpException
 
 class SettingsFragment : Fragment() {
 
@@ -66,19 +68,49 @@ class SettingsFragment : Fragment() {
         val app = requireActivity().application as HealthTrackerApp
         lifecycleScope.launch {
             try {
-                val response = app.apiService.login(username, password)
-                val prefs = requireContext().getSharedPreferences("auth", Context.MODE_PRIVATE)
-                prefs.edit()
-                    .putString("token", response.accessToken)
-                    .putString("username", username)
-                    .apply()
-                binding.textStatus.text = "Logged in as $username"
-                binding.textStatus.setTextColor(resources.getColor(android.R.color.holo_green_dark, null))
-                Toast.makeText(requireContext(), "Login successful", Toast.LENGTH_SHORT).show()
+                if (authenticate(app, username, password)) {
+                    toast("Login successful")
+                    return@launch
+                }
+                // Login 401s for both "no such account" and "wrong password", so
+                // try creating the account — a 400 back means it already existed
+                // and the password was simply wrong.
+                try {
+                    app.apiService.register(CredentialsRequest(username, password))
+                } catch (e: HttpException) {
+                    toast(if (e.code() == 400) "Incorrect password" else "Registration failed: ${e.message}")
+                    return@launch
+                }
+                if (authenticate(app, username, password)) {
+                    toast("Account created — logged in")
+                } else {
+                    toast("Account created, but sign-in failed")
+                }
             } catch (e: Exception) {
-                Toast.makeText(requireContext(), "Login failed: ${e.message}", Toast.LENGTH_LONG).show()
+                toast("Login failed: ${e.message}")
             }
         }
+    }
+
+    /** Signs in and persists the token. Returns false on a 401; other failures propagate. */
+    private suspend fun authenticate(app: HealthTrackerApp, username: String, password: String): Boolean {
+        val response = try {
+            app.apiService.login(username, password)
+        } catch (e: HttpException) {
+            if (e.code() == 401) return false
+            throw e
+        }
+        requireContext().getSharedPreferences("auth", Context.MODE_PRIVATE).edit()
+            .putString("token", response.accessToken)
+            .putString("username", username)
+            .apply()
+        binding.textStatus.text = "Logged in as $username"
+        binding.textStatus.setTextColor(resources.getColor(android.R.color.holo_green_dark, null))
+        return true
+    }
+
+    private fun toast(message: String) {
+        Toast.makeText(requireContext(), message, Toast.LENGTH_LONG).show()
     }
 
     private fun requestHealthPermissions() {
