@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/dashboardFragment"
+        android:icon="@android:drawable/ic_menu_today"
+        android:title="Today" />
+    <item
+        android:id="@+id/logFragment"
+        android:icon="@android:drawable/ic_menu_add"
+        android:title="Log" />
+    <item
+        android:id="@+id/insightsFragment"
+        android:icon="@android:drawable/ic_menu_info_details"
+        android:title="Insights" />
+    <item
+        android:id="@+id/settingsFragment"
+        android:icon="@android:drawable/ic_menu_preferences"
+        android:title="Settings" />
+</menu>

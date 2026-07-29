@@ -1,0 +1,6 @@
+-keep class com.healthtracker.app.data.remote.** { *; }
+-keep class com.healthtracker.app.data.local.entity.** { *; }
+-keepattributes Signature
+-keepattributes *Annotation*
+-dontwarn okhttp3.**
+-dontwarn retrofit2.**

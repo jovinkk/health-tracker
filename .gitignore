@@ -1,0 +1,32 @@
+# Backend (Python)
+backend/__pycache__/
+backend/**/__pycache__/
+backend/**/*.pyc
+backend/venv/
+backend/.env
+backend/health_tracker.db
+
+# Web (Node)
+web/node_modules/
+web/dist/
+web/.env.local
+
+# Android
+android/.gradle/
+android/app/build/
+android/build/
+android/local.properties
+android/.idea/
+android/*.iml
+android/app/*.iml
+android/captures/
+android/.cxx/
+*.apk
+*.aab
+
+# Local tooling config (may contain local secrets)
+.claude/settings.local.json
+
+# OS
+.DS_Store
+Thumbs.db
