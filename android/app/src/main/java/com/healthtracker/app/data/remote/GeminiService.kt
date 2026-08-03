@@ -12,7 +12,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /**
- * Sends a speech transcript to Gemini 1.5 Flash and returns a ParsedEntry.
+ * Sends a speech transcript to Gemini and returns a ParsedEntry.
  */
 class GeminiService {
 
@@ -54,7 +54,7 @@ Always include a "summary" field: one sentence summarising the entry.
     )
 
     suspend fun parseHealthInput(transcript: String): ParsedEntry = withContext(Dispatchers.IO) {
-        val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent" +
+        val url = "https://generativelanguage.googleapis.com/v1beta/models/$MODEL:generateContent" +
                 "?key=${BuildConfig.GEMINI_API_KEY}"
 
         val body = JSONObject().apply {
@@ -109,5 +109,12 @@ Always include a "summary" field: one sentence summarising the entry.
             summary = parsed.optString("summary", transcript),
             rawInput = transcript,
         )
+    }
+
+    companion object {
+        // Retired models 404 rather than degrade, and appearing in ListModels is
+        // not enough — gemini-2.5-flash is listed but rejects new callers. Verify
+        // with a real generateContent call before changing this.
+        private const val MODEL = "gemini-3.6-flash"
     }
 }
