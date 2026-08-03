@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -43,7 +44,20 @@ def on_startup():
 
 @app.get("/health")
 def health_check():
-    # Reports the driver in use so a silent fallback to the ephemeral SQLite
-    # file is visible, rather than only surfacing as data loss after a restart.
-    # Dialect name only — never any part of the connection string.
-    return {"status": "ok", "database": engine.dialect.name}
+    # engine.dialect.name is read from config without opening a connection, so
+    # reporting it alone says nothing about whether the database is reachable.
+    # Issue a trivial query so bad credentials or an unreachable host show up
+    # here instead of as a 500 on the first real request.
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        connected = True
+    except Exception:
+        connected = False
+
+    return {
+        "status": "ok" if connected else "degraded",
+        # Dialect name only — never any part of the connection string.
+        "database": engine.dialect.name,
+        "database_connected": connected,
+    }
