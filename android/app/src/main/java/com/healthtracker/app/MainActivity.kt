@@ -100,10 +100,14 @@ class MainActivity : AppCompatActivity() {
         binding.bottomNavigation.setupWithNavController(navController)
 
         SyncWorker.schedule(this)
+        // Covers the case where Health Connect has data but the dashboard isn't
+        // the screen being opened; WorkManager dedupes if one is already queued.
+        SyncWorker.runNow(this)
     }
 
     fun requestHealthConnectPermissions() {
         val app = application as HealthTrackerApp
-        healthPermissionsLauncher.launch(app.healthConnectManager.requiredPermissions)
+        // Ask for history alongside the reads; declining it only caps backfill at 30 days.
+        healthPermissionsLauncher.launch(app.healthConnectManager.allPermissions)
     }
 }

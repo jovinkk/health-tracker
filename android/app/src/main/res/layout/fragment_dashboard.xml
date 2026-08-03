@@ -15,24 +15,54 @@
         android:paddingTop="20dp"
         android:paddingBottom="24dp">
 
-        <!-- Header -->
-        <TextView
-            android:layout_width="wrap_content"
+        <!-- Header: syncs automatically, so the manual trigger stays understated -->
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Today"
-            android:textSize="28sp"
-            android:textStyle="bold"
-            android:textColor="@color/text_primary"
-            android:layout_marginBottom="2dp" />
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="20dp">
 
-        <TextView
-            android:id="@+id/text_last_sync"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Last sync: —"
-            android:textSize="13sp"
-            android:textColor="@color/text_secondary"
-            android:layout_marginBottom="20dp" />
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Today"
+                    android:textSize="28sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/text_primary"
+                    android:layout_marginBottom="2dp" />
+
+                <TextView
+                    android:id="@+id/text_last_sync"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Last sync: —"
+                    android:textSize="13sp"
+                    android:textColor="@color/text_secondary" />
+            </LinearLayout>
+
+            <ProgressBar
+                android:id="@+id/progress_sync"
+                style="?android:attr/progressBarStyleSmall"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:visibility="gone" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_sync"
+                style="@style/Widget.Material3.Button.IconButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:contentDescription="Sync now"
+                app:icon="@drawable/ic_sync"
+                app:iconSize="22dp" />
+        </LinearLayout>
 
         <!-- No data state -->
         <com.google.android.material.card.MaterialCardView
@@ -50,7 +80,7 @@
                 android:id="@+id/text_no_data"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="No wearable data yet.\nTap Sync to read from Health Connect."
+                android:text="No wearable data yet.\nCheck that your fitness app is sharing with Health Connect — see Settings → Setup help."
                 android:textColor="@color/text_secondary"
                 android:textSize="14sp"
                 android:padding="24dp"
@@ -408,20 +438,6 @@
             </LinearLayout>
 
         </LinearLayout>
-
-        <!-- Sync button -->
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_sync"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Sync Health Data"
-            android:textSize="15sp"
-            android:paddingTop="14dp"
-            android:paddingBottom="14dp"
-            app:cornerRadius="14dp"
-            app:icon="@android:drawable/stat_sys_download"
-            app:iconGravity="textStart"
-            app:iconPadding="8dp" />
 
     </LinearLayout>
 </ScrollView>

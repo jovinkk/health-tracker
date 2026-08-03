@@ -4,10 +4,13 @@ import android.content.Context
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.*
+import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import com.healthtracker.app.data.local.entity.WearableSnapshot
 import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 
 class HealthConnectManager(private val context: Context) {
@@ -25,6 +28,15 @@ class HealthConnectManager(private val context: Context) {
         HealthPermission.getReadPermission(TotalCaloriesBurnedRecord::class),
     )
 
+    /**
+     * Without this, Health Connect only returns the last 30 days regardless of what
+     * the source app has stored. Requested alongside the read permissions, but the
+     * app still works if the user declines it — history is just capped at 30 days.
+     */
+    val historyPermission = HISTORY_PERMISSION
+
+    val allPermissions = requiredPermissions + historyPermission
+
     fun isAvailable(): Boolean =
         HealthConnectClient.getSdkStatus(context) == HealthConnectClient.SDK_AVAILABLE
 
@@ -33,44 +45,73 @@ class HealthConnectManager(private val context: Context) {
         return granted.containsAll(requiredPermissions)
     }
 
+    suspend fun hasHistoryPermission(): Boolean =
+        client.permissionController.getGrantedPermissions().contains(historyPermission)
+
+    /** Apps that have written step data, for showing the user where numbers come from. */
+    suspend fun stepDataSources(): Set<String> = runCatching {
+        val range = TimeRangeFilter.between(Instant.now().minus(7, ChronoUnit.DAYS), Instant.now())
+        client.readRecords(ReadRecordsRequest(StepsRecord::class, range))
+            .records.map { it.metadata.dataOrigin.packageName }.toSet()
+    }.getOrDefault(emptySet())
+
+    suspend fun readTodaySnapshot(): WearableSnapshot = readDaySnapshot(LocalDate.now())
+
     /**
-     * Read today's health data and return a WearableSnapshot (unsaved, id=0).
+     * Read one local calendar day and return a WearableSnapshot (unsaved, id=0).
+     *
+     * Totals come from Health Connect's aggregate API rather than summing raw
+     * records: when several apps write the same metric (a phone's own pedometer
+     * alongside a watch, say) their records overlap, and only aggregation
+     * de-duplicates them. Summing records double-counts.
      */
-    suspend fun readTodaySnapshot(): WearableSnapshot {
-        val end = Instant.now()
-        val start = end.truncatedTo(ChronoUnit.DAYS)
-        val range = TimeRangeFilter.between(start, end)
+    suspend fun readDaySnapshot(day: LocalDate): WearableSnapshot {
+        val zone = ZoneId.systemDefault()
+        val dayStart = day.atStartOfDay(zone).toInstant()
+        val dayEnd = day.plusDays(1).atStartOfDay(zone).toInstant()
+        // Don't ask for the future; Health Connect rejects ranges beyond now.
+        val end = if (dayEnd.isAfter(Instant.now())) Instant.now() else dayEnd
+        if (!end.isAfter(dayStart)) return emptySnapshot(dayStart)
+        val range = TimeRangeFilter.between(dayStart, end)
 
-        val steps = runCatching {
-            client.readRecords(ReadRecordsRequest(StepsRecord::class, range))
-                .records.sumOf { it.count }.toInt()
+        val totals = runCatching {
+            client.aggregate(
+                AggregateRequest(
+                    metrics = setOf(
+                        StepsRecord.COUNT_TOTAL,
+                        HeartRateRecord.BPM_AVG,
+                        RestingHeartRateRecord.BPM_AVG,
+                        ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL,
+                        TotalCaloriesBurnedRecord.ENERGY_TOTAL,
+                    ),
+                    timeRangeFilter = range,
+                )
+            )
         }.getOrNull()
 
-        val hrAvg = runCatching {
-            val records = client.readRecords(ReadRecordsRequest(HeartRateRecord::class, range)).records
-            if (records.isEmpty()) null
-            else records.flatMap { it.samples }.map { it.beatsPerMinute }.average().toFloat()
-        }.getOrNull()
+        val steps = totals?.get(StepsRecord.COUNT_TOTAL)?.toInt()
+        val hrAvg = totals?.get(HeartRateRecord.BPM_AVG)?.toFloat()
+        val rhr = totals?.get(RestingHeartRateRecord.BPM_AVG)?.toFloat()
+        val activeCal = totals?.get(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL)?.inKilocalories?.toFloat()
+        val totalCal = totals?.get(TotalCaloriesBurnedRecord.ENERGY_TOTAL)?.inKilocalories?.toFloat()
 
-        val rhr = runCatching {
-            client.readRecords(ReadRecordsRequest(RestingHeartRateRecord::class, range))
-                .records.lastOrNull()?.beatsPerMinute?.toFloat()
-        }.getOrNull()
-
+        // No aggregate metric exists for these, so take the day's last reading.
         val hrv = runCatching {
             client.readRecords(ReadRecordsRequest(HeartRateVariabilityRmssdRecord::class, range))
-                .records.lastOrNull()?.heartRateVariabilityMillis?.toFloat()
+                .records.maxByOrNull { it.time }?.heartRateVariabilityMillis?.toFloat()
         }.getOrNull()
 
         val spo2 = runCatching {
             client.readRecords(ReadRecordsRequest(OxygenSaturationRecord::class, range))
-                .records.lastOrNull()?.percentage?.value?.toFloat()
+                .records.maxByOrNull { it.time }?.percentage?.value?.toFloat()
         }.getOrNull()
 
+        // A night's sleep is attributed to the day it ends on, so look back from
+        // the end of the day rather than only inside it.
         val sleepData = runCatching {
-            // Read last 36h for sleep sessions that may have started yesterday
-            val sleepRange = TimeRangeFilter.between(end.minus(36, ChronoUnit.HOURS), end)
+            val sleepRange = TimeRangeFilter.between(dayStart.minus(24, ChronoUnit.HOURS), end)
             client.readRecords(ReadRecordsRequest(SleepSessionRecord::class, sleepRange)).records
+                .filter { it.endTime.isAfter(dayStart) }
                 .maxByOrNull { it.endTime }
         }.getOrNull()
 
@@ -88,18 +129,9 @@ class HealthConnectManager(private val context: Context) {
             ?.sumOf { ChronoUnit.MINUTES.between(it.startTime, it.endTime) }
             ?.toInt()
 
-        val activeCal = runCatching {
-            client.readRecords(ReadRecordsRequest(ActiveCaloriesBurnedRecord::class, range))
-                .records.sumOf { it.energy.inKilocalories }.toFloat()
-        }.getOrNull()
-
-        val totalCal = runCatching {
-            client.readRecords(ReadRecordsRequest(TotalCaloriesBurnedRecord::class, range))
-                .records.sumOf { it.energy.inKilocalories }.toFloat()
-        }.getOrNull()
-
         return WearableSnapshot(
-            timestamp = System.currentTimeMillis(),
+            // Stamp the day itself, not "now", so historical days sort correctly.
+            timestamp = if (day == LocalDate.now()) System.currentTimeMillis() else dayStart.toEpochMilli(),
             deviceName = "Health Connect",
             steps = steps,
             heartRateAvg = hrAvg,
@@ -112,5 +144,47 @@ class HealthConnectManager(private val context: Context) {
             caloriesActive = activeCal,
             caloriesTotal = totalCal,
         )
+    }
+
+    /**
+     * Walk backwards a day at a time collecting snapshots. Health Connect has no
+     * "how far back does data go" query, so this stops after a stretch of empty
+     * days rather than always querying the full window.
+     */
+    suspend fun readHistory(
+        maxDays: Int = MAX_BACKFILL_DAYS,
+        onProgress: ((done: Int, total: Int) -> Unit)? = null,
+    ): List<WearableSnapshot> {
+        val snapshots = mutableListOf<WearableSnapshot>()
+        var emptyRun = 0
+        for (offset in 1..maxDays) {
+            val day = LocalDate.now().minusDays(offset.toLong())
+            val snapshot = runCatching { readDaySnapshot(day) }.getOrNull()
+            onProgress?.invoke(offset, maxDays)
+            if (snapshot == null || snapshot.isEmpty()) {
+                if (++emptyRun >= EMPTY_DAY_RUN_LIMIT) break
+                continue
+            }
+            emptyRun = 0
+            snapshots += snapshot
+        }
+        return snapshots
+    }
+
+    private fun emptySnapshot(at: Instant) =
+        WearableSnapshot(timestamp = at.toEpochMilli(), deviceName = "Health Connect")
+
+    private fun WearableSnapshot.isEmpty(): Boolean =
+        steps == null && heartRateAvg == null && heartRateResting == null &&
+            hrvMs == null && spo2Pct == null && sleepDurationMin == null &&
+            caloriesActive == null && caloriesTotal == null
+
+    companion object {
+        // Raw string rather than the SDK constant so this compiles across
+        // connect-client versions; matches the manifest declaration.
+        const val HISTORY_PERMISSION = "android.permission.health.READ_HEALTH_DATA_HISTORY"
+
+        private const val MAX_BACKFILL_DAYS = 365
+        private const val EMPTY_DAY_RUN_LIMIT = 21
     }
 }

@@ -14,6 +14,7 @@ import com.healthtracker.app.HealthTrackerApp
 import com.healthtracker.app.MainActivity
 import com.healthtracker.app.data.remote.CredentialsRequest
 import com.healthtracker.app.databinding.ActivityLoginBinding
+import com.healthtracker.app.ui.setup.SetupActivity
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
@@ -159,7 +160,14 @@ class LoginActivity : AppCompatActivity() {
     }
 
     private fun goToMain() {
-        startActivity(Intent(this, MainActivity::class.java))
+        // First run goes through setup, which explains the Health Connect step
+        // that otherwise leaves every metric reading zero.
+        val next = if (SetupActivity.hasCompletedSetup(this)) {
+            Intent(this, MainActivity::class.java)
+        } else {
+            Intent(this, SetupActivity::class.java)
+        }
+        startActivity(next)
         finish()
     }
 

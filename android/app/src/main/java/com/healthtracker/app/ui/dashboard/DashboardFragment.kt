@@ -1,6 +1,7 @@
 package com.healthtracker.app.ui.dashboard
 
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -12,6 +13,7 @@ import androidx.lifecycle.lifecycleScope
 import com.healthtracker.app.HealthTrackerApp
 import com.healthtracker.app.MainActivity
 import com.healthtracker.app.databinding.FragmentDashboardBinding
+import com.healthtracker.app.ui.setup.SetupActivity
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
@@ -30,13 +32,29 @@ class DashboardFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        binding.cardNoData.setOnClickListener {
+            startActivity(Intent(requireContext(), SetupActivity::class.java))
+        }
+
         viewModel.latestSnapshot.observe(viewLifecycleOwner) { snap ->
             if (snap == null) {
+                binding.textNoData.text =
+                    "No wearable data yet.\nTap here for help connecting your fitness app."
                 binding.cardNoData.visibility = View.VISIBLE
                 binding.metricsGroup.visibility = View.GONE
                 return@observe
             }
-            binding.cardNoData.visibility = View.GONE
+            // A snapshot that read nothing means Health Connect is reachable but the
+            // source app isn't sharing — the metrics below would all show dashes.
+            val hasAnything = listOfNotNull(
+                snap.steps, snap.heartRateAvg, snap.hrvMs,
+                snap.sleepDurationMin, snap.spo2Pct, snap.caloriesActive,
+            ).isNotEmpty()
+            if (!hasAnything) {
+                binding.textNoData.text =
+                    "Synced, but your fitness app isn't sharing any data with Health Connect yet.\nTap here for setup help."
+            }
+            binding.cardNoData.visibility = if (hasAnything) View.GONE else View.VISIBLE
             binding.metricsGroup.visibility = View.VISIBLE
 
             binding.textSteps.text = snap.steps?.let { "%,d".format(it) } ?: "—"
@@ -52,29 +70,45 @@ class DashboardFragment : Fragment() {
         }
 
         viewModel.syncState.observe(viewLifecycleOwner) { state ->
-            when (state) {
-                SyncState.SYNCING -> {
-                    binding.btnSync.isEnabled = false
-                    binding.btnSync.text = "Syncing…"
-                }
-                SyncState.DONE -> {
-                    binding.btnSync.isEnabled = true
-                    binding.btnSync.text = "Sync Health Data"
-                }
-                SyncState.ERROR -> {
-                    binding.btnSync.isEnabled = true
-                    binding.btnSync.text = "Sync Health Data"
-                    Toast.makeText(requireContext(), "Sync failed — check your connection and login.", Toast.LENGTH_LONG).show()
-                }
-                else -> {
-                    binding.btnSync.isEnabled = true
-                    binding.btnSync.text = "Sync Health Data"
-                }
+            val syncing = state == SyncState.SYNCING
+            binding.progressSync.visibility = if (syncing) View.VISIBLE else View.GONE
+            binding.btnSync.visibility = if (syncing) View.GONE else View.VISIBLE
+            if (state == SyncState.ERROR) {
+                Toast.makeText(
+                    requireContext(),
+                    "Sync failed — check your connection and login.",
+                    Toast.LENGTH_LONG,
+                ).show()
             }
         }
 
         binding.btnSync.setOnClickListener {
             handleSyncButtonTap()
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        maybeAutoSync()
+    }
+
+    /**
+     * Syncs on open so the manual control is rarely needed, throttled so that
+     * hopping between tabs doesn't fire a request every time.
+     */
+    private fun maybeAutoSync() {
+        val prefs = requireContext().getSharedPreferences("auth", Context.MODE_PRIVATE)
+        val token = prefs.getString("token", null) ?: return
+        val since = System.currentTimeMillis() - prefs.getLong(KEY_LAST_AUTO_SYNC, 0L)
+        if (since < AUTO_SYNC_MIN_INTERVAL_MS) return
+
+        val app = requireActivity().application as HealthTrackerApp
+        if (!app.healthConnectManager.isAvailable()) return
+
+        lifecycleScope.launch {
+            if (!app.healthConnectManager.hasPermissions()) return@launch
+            prefs.edit().putLong(KEY_LAST_AUTO_SYNC, System.currentTimeMillis()).apply()
+            viewModel.syncNow(token)
         }
     }
 
@@ -112,5 +146,10 @@ class DashboardFragment : Fragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
+    }
+
+    companion object {
+        private const val KEY_LAST_AUTO_SYNC = "last_auto_sync"
+        private const val AUTO_SYNC_MIN_INTERVAL_MS = 5 * 60 * 1000L
     }
 }

@@ -51,6 +51,10 @@ class HealthRepository(
         snapshotDao.insertAll(listOf(snapshot))
     }
 
+    suspend fun saveSnapshots(snapshots: List<WearableSnapshot>) {
+        if (snapshots.isNotEmpty()) snapshotDao.insertAll(snapshots)
+    }
+
     // ── Sync unsynced data to backend ──────────────────────────────────────────
 
     suspend fun syncPendingEntries(authToken: String) {

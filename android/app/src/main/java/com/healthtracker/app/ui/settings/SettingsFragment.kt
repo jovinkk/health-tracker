@@ -11,6 +11,7 @@ import androidx.fragment.app.Fragment
 import com.healthtracker.app.HealthTrackerApp
 import com.healthtracker.app.databinding.FragmentSettingsBinding
 import com.healthtracker.app.ui.login.LoginActivity
+import com.healthtracker.app.ui.setup.SetupActivity
 
 class SettingsFragment : Fragment() {
 
@@ -38,6 +39,10 @@ class SettingsFragment : Fragment() {
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
             startActivity(intent)
             requireActivity().finish()
+        }
+
+        binding.btnSetupHelp.setOnClickListener {
+            startActivity(Intent(requireContext(), SetupActivity::class.java))
         }
 
         binding.btnGrantHealth.setOnClickListener {

@@ -19,6 +19,8 @@
     <uses-permission android:name="android.permission.health.READ_TOTAL_CALORIES_BURNED" />
     <uses-permission android:name="android.permission.health.READ_STRESS" />
     <uses-permission android:name="android.permission.health.READ_SKIN_TEMPERATURE" />
+    <!-- Without this Health Connect caps reads at the last 30 days -->
+    <uses-permission android:name="android.permission.health.READ_HEALTH_DATA_HISTORY" />
 
     <!-- Foreground service for background sync -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
@@ -42,6 +44,10 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".ui.setup.SetupActivity"
+            android:exported="false" />
 
         <activity
             android:name=".MainActivity"
