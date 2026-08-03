@@ -1,19 +1,16 @@
 package com.healthtracker.app.ui.settings
 
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.lifecycleScope
 import com.healthtracker.app.HealthTrackerApp
-import com.healthtracker.app.data.remote.CredentialsRequest
 import com.healthtracker.app.databinding.FragmentSettingsBinding
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.launch
-import retrofit2.HttpException
+import com.healthtracker.app.ui.login.LoginActivity
 
 class SettingsFragment : Fragment() {
 
@@ -28,112 +25,24 @@ class SettingsFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         val prefs = requireContext().getSharedPreferences("auth", Context.MODE_PRIVATE)
 
-        // Pre-fill saved username
-        binding.editUsername.setText(prefs.getString("username", ""))
-
-        binding.btnLogin.setOnClickListener {
-            val username = binding.editUsername.text.toString().trim()
-            val password = binding.editPassword.text.toString()
-            if (username.isBlank() || password.isBlank()) {
-                Toast.makeText(requireContext(), "Enter username and password", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-            login(username, password)
-        }
+        // Sign-in happens in LoginActivity before this screen is reachable, so
+        // there is always a signed-in user here.
+        val savedUser = prefs.getString("username", null)
+        binding.textStatus.text = if (savedUser != null) "Logged in as $savedUser" else "Not logged in"
+        binding.textStatus.setTextColor(resources.getColor(android.R.color.holo_green_dark, null))
 
         binding.btnLogout.setOnClickListener {
             prefs.edit().remove("token").remove("username").apply()
-            binding.textStatus.text = "Logged out"
-            binding.textStatus.setTextColor(resources.getColor(android.R.color.holo_orange_dark, null))
             Toast.makeText(requireContext(), "Logged out", Toast.LENGTH_SHORT).show()
+            val intent = Intent(requireContext(), LoginActivity::class.java)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+            startActivity(intent)
+            requireActivity().finish()
         }
 
-        // Show current status
-        val hasToken = prefs.getString("token", null) != null
-        val savedUser = prefs.getString("username", null)
-        if (hasToken && savedUser != null) {
-            binding.textStatus.text = "Logged in as $savedUser"
-            binding.textStatus.setTextColor(resources.getColor(android.R.color.holo_green_dark, null))
-        } else {
-            binding.textStatus.text = "Not logged in"
-            binding.textStatus.setTextColor(resources.getColor(android.R.color.holo_orange_dark, null))
-        }
-
-        // Health Connect permissions
         binding.btnGrantHealth.setOnClickListener {
             requestHealthPermissions()
         }
-    }
-
-    private fun login(username: String, password: String) {
-        val app = requireActivity().application as HealthTrackerApp
-        lifecycleScope.launch {
-            setBusy(true)
-            try {
-                if (authenticate(app, username, password)) {
-                    toast("Login successful")
-                    return@launch
-                }
-                // Login 401s for both "no such account" and "wrong password", so
-                // try creating the account — a 400 back means it already existed
-                // and the password was simply wrong.
-                try {
-                    app.apiService.register(CredentialsRequest(username, password))
-                } catch (e: HttpException) {
-                    toast(if (e.code() == 400) "Incorrect password" else "Registration failed: ${e.message}")
-                    return@launch
-                }
-                if (authenticate(app, username, password)) {
-                    toast("Account created — logged in")
-                } else {
-                    toast("Account created, but sign-in failed")
-                }
-            } catch (e: CancellationException) {
-                // Leaving the screen mid-request is not a login failure
-                throw e
-            } catch (e: Exception) {
-                toast("Login failed: ${e.message}")
-                setStatus("Not logged in", android.R.color.holo_orange_dark)
-            } finally {
-                setBusy(false)
-            }
-        }
-    }
-
-    /** Disables the button and warns that a sleeping free-tier backend can take a while to wake. */
-    private fun setBusy(busy: Boolean) {
-        val binding = _binding ?: return
-        binding.btnLogin.isEnabled = !busy
-        if (busy) {
-            setStatus("Signing in… server may take up to a minute to wake", android.R.color.holo_orange_dark)
-        }
-    }
-
-    private fun setStatus(text: String, colorRes: Int) {
-        val binding = _binding ?: return
-        binding.textStatus.text = text
-        binding.textStatus.setTextColor(resources.getColor(colorRes, null))
-    }
-
-    /** Signs in and persists the token. Returns false on a 401; other failures propagate. */
-    private suspend fun authenticate(app: HealthTrackerApp, username: String, password: String): Boolean {
-        val response = try {
-            app.apiService.login(username, password)
-        } catch (e: HttpException) {
-            if (e.code() == 401) return false
-            throw e
-        }
-        requireContext().getSharedPreferences("auth", Context.MODE_PRIVATE).edit()
-            .putString("token", response.accessToken)
-            .putString("username", username)
-            .apply()
-        setStatus("Logged in as $username", android.R.color.holo_green_dark)
-        return true
-    }
-
-    private fun toast(message: String) {
-        val context = context ?: return
-        Toast.makeText(context, message, Toast.LENGTH_LONG).show()
     }
 
     private fun requestHealthPermissions() {
