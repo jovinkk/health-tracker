@@ -2,6 +2,7 @@ package com.healthtracker.app.health
 
 import android.content.Context
 import androidx.health.connect.client.HealthConnectClient
+import androidx.health.connect.client.aggregate.AggregateMetric
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.*
 import androidx.health.connect.client.records.metadata.DataOrigin
@@ -14,6 +15,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
+import kotlin.reflect.KClass
 
 class HealthConnectManager(
     private val context: Context,
@@ -33,6 +35,15 @@ class HealthConnectManager(
      */
     private fun originFilter(): Set<DataOrigin> =
         settings.stepSourcePackage?.let { setOf(DataOrigin(it)) } ?: emptySet()
+
+    /** Aggregate a single metric, returning null rather than failing the caller. */
+    private suspend fun <T : Any> aggregate(
+        metric: AggregateMetric<T>,
+        range: TimeRangeFilter,
+        origins: Set<DataOrigin> = emptySet(),
+    ): T? = runCatching {
+        client.aggregate(AggregateRequest(setOf(metric), range, origins))[metric]
+    }.getOrNull()
 
     val requiredPermissions = setOf(
         HealthPermission.getReadPermission(StepsRecord::class),
@@ -81,6 +92,56 @@ class HealthConnectManager(
 
     data class StepSource(val packageName: String, val stepsLast7Days: Long)
 
+    /**
+     * Per-type report of what Health Connect actually holds.
+     *
+     * A metric can be missing for three different reasons — permission not
+     * granted, no app writing that type, or an app writing it that the source
+     * filter excludes — and they are indistinguishable from a blank dashboard.
+     */
+    suspend fun diagnostics(days: Long = 7): List<DataTypeStatus> {
+        val granted = runCatching { client.permissionController.getGrantedPermissions() }
+            .getOrDefault(emptySet())
+        val end = Instant.now()
+        val range = TimeRangeFilter.between(end.minus(days, ChronoUnit.DAYS), end)
+        return listOf(
+            typeStatus("Steps", StepsRecord::class, granted, range),
+            typeStatus("Heart rate", HeartRateRecord::class, granted, range),
+            typeStatus("Resting heart rate", RestingHeartRateRecord::class, granted, range),
+            typeStatus("HRV", HeartRateVariabilityRmssdRecord::class, granted, range),
+            typeStatus("Blood oxygen", OxygenSaturationRecord::class, granted, range),
+            typeStatus("Sleep", SleepSessionRecord::class, granted, range),
+            typeStatus("Active calories", ActiveCaloriesBurnedRecord::class, granted, range),
+            typeStatus("Total calories", TotalCaloriesBurnedRecord::class, granted, range),
+        )
+    }
+
+    private suspend fun <T : Record> typeStatus(
+        label: String,
+        type: KClass<T>,
+        granted: Set<String>,
+        range: TimeRangeFilter,
+    ): DataTypeStatus {
+        val isGranted = HealthPermission.getReadPermission(type) in granted
+        if (!isGranted) return DataTypeStatus(label, granted = false, recordCount = 0, sources = emptyList())
+        val records = runCatching {
+            client.readRecords(ReadRecordsRequest(type, range)).records
+        }.getOrDefault(emptyList())
+        return DataTypeStatus(
+            label = label,
+            granted = true,
+            recordCount = records.size,
+            sources = records.map { it.metadata.dataOrigin.packageName }.distinct(),
+        )
+    }
+
+    data class DataTypeStatus(
+        val label: String,
+        val granted: Boolean,
+        val recordCount: Int,
+        val sources: List<String>,
+    )
+
     suspend fun readTodaySnapshot(): WearableSnapshot = readDaySnapshot(LocalDate.now())
 
     /**
@@ -100,27 +161,15 @@ class HealthConnectManager(
         if (!end.isAfter(dayStart)) return emptySnapshot(dayStart)
         val range = TimeRangeFilter.between(dayStart, end)
 
-        val totals = runCatching {
-            client.aggregate(
-                AggregateRequest(
-                    metrics = setOf(
-                        StepsRecord.COUNT_TOTAL,
-                        HeartRateRecord.BPM_AVG,
-                        RestingHeartRateRecord.BPM_AVG,
-                        ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL,
-                        TotalCaloriesBurnedRecord.ENERGY_TOTAL,
-                    ),
-                    timeRangeFilter = range,
-                    dataOriginFilter = originFilter(),
-                )
-            )
-        }.getOrNull()
-
-        val steps = totals?.get(StepsRecord.COUNT_TOTAL)?.toInt()
-        val hrAvg = totals?.get(HeartRateRecord.BPM_AVG)?.toFloat()
-        val rhr = totals?.get(RestingHeartRateRecord.BPM_AVG)?.toFloat()
-        val activeCal = totals?.get(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL)?.inKilocalories?.toFloat()
-        val totalCal = totals?.get(TotalCaloriesBurnedRecord.ENERGY_TOTAL)?.inKilocalories?.toFloat()
+        // One request per metric: a single unsupported or unpermitted metric makes
+        // the whole batch throw, which previously wiped every reading rather than
+        // just the offending one. The source filter is a *step* preference, so it
+        // must not restrict calories or heart rate to that same app.
+        val steps = aggregate(StepsRecord.COUNT_TOTAL, range, originFilter())?.toInt()
+        val hrAvg = aggregate(HeartRateRecord.BPM_AVG, range)?.toFloat()
+        val rhr = aggregate(RestingHeartRateRecord.BPM_AVG, range)?.toFloat()
+        val activeCal = aggregate(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL, range)?.inKilocalories?.toFloat()
+        val totalCal = aggregate(TotalCaloriesBurnedRecord.ENERGY_TOTAL, range)?.inKilocalories?.toFloat()
 
         // No aggregate metric exists for these, so take the day's last reading.
         val hrv = runCatching {

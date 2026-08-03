@@ -35,6 +35,45 @@ def _last_n_days_entries(db: Session, user_id: int, entry_type: str, days: int) 
     )
 
 
+# ── Data hygiene ──────────────────────────────────────────────────────────────
+
+# A tracker left on a desk still reports a handful of steps from being carried
+# about, so require more than a trivial count before calling a day "worn".
+MIN_STEPS_FOR_WEAR = 500
+
+
+def _one_per_day(snapshots: list) -> list:
+    """
+    Collapse to a single snapshot per calendar day.
+
+    The app appends a snapshot on each sync, so one day can carry several
+    partial rows — a morning sync captures only that morning's steps. Detectors
+    count entries, so without this a single day reads as several low ones.
+    Keeps the richest row per day.
+    """
+    by_day: dict = {}
+    for s in snapshots:
+        key = s.timestamp.date()
+        current = by_day.get(key)
+        if current is None or (s.steps or -1) > (current.steps or -1):
+            by_day[key] = s
+    return [by_day[k] for k in sorted(by_day)]
+
+
+def _was_worn(s) -> bool:
+    """
+    Whether there's evidence the device was actually worn that day.
+
+    A day with no heart-rate, HRV or SpO2 reading and negligible steps is far
+    more likely to be a day the tracker sat on a charger than a genuinely
+    sedentary one. Counting those as inactivity produces alerts for days the
+    user simply wasn't wearing anything.
+    """
+    if s.heart_rate_avg or s.heart_rate_resting or s.hrv_ms or s.spo2_pct:
+        return True
+    return (s.steps or 0) >= MIN_STEPS_FOR_WEAR
+
+
 # ── Individual pattern detectors ──────────────────────────────────────────────
 
 def check_sleep_deficit(snapshots: list) -> Optional[dict]:
@@ -82,15 +121,17 @@ def check_low_hrv(snapshots: list) -> Optional[dict]:
 
 def check_sedentary_streak(snapshots: list) -> Optional[dict]:
     """Prolonged inactivity is associated with metabolic disease independently of exercise."""
-    if len(snapshots) < 5:
+    # Only days the tracker was actually worn say anything about activity
+    worn = [s for s in snapshots if _was_worn(s)]
+    if len(worn) < 5:
         return None
-    sedentary_days = [s for s in snapshots if s.steps is not None and s.steps < 4000]
+    sedentary_days = [s for s in worn if s.steps is not None and s.steps < 4000]
     if len(sedentary_days) >= 4:
         avg_steps = sum(s.steps for s in sedentary_days) / len(sedentary_days)
         return {
             "pattern_id": "sedentary_streak",
             "title": "Prolonged Sedentary Pattern",
-            "description": f"{len(sedentary_days)} days with fewer than 4,000 steps (avg {avg_steps:.0f} steps/day).",
+            "description": f"{len(sedentary_days)} of {len(worn)} days with the tracker worn had fewer than 4,000 steps (avg {avg_steps:.0f} steps/day).",
             "severity": "warning",
             "science_note": "Sedentary time >8h/day is associated with a 22% increase in all-cause mortality, independent of exercise habits (Biswas et al., Ann Intern Med 2015). 7,500+ daily steps is the evidence-based minimum for longevity benefit (Saint-Maurice et al., JAMA Int Med 2020).",
             "days_observed": len(sedentary_days),
@@ -205,7 +246,8 @@ def check_mood_decline(entries: list) -> Optional[dict]:
 # ── Main entry point ──────────────────────────────────────────────────────────
 
 def get_pattern_alerts(db: Session, user_id: int, days: int = 30) -> list[dict]:
-    snapshots = _last_n_days_wearable(db, user_id, days)
+    # Detectors count entries as days, so collapse duplicate syncs first
+    snapshots = _one_per_day(_last_n_days_wearable(db, user_id, days))
     stress_entries = _last_n_days_entries(db, user_id, "stress", days)
     pain_entries = _last_n_days_entries(db, user_id, "pain", days)
     mood_entries = _last_n_days_entries(db, user_id, "mood", days)

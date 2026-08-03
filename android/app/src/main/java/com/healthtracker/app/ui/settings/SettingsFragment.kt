@@ -69,6 +69,8 @@ class SettingsFragment : Fragment() {
             (requireActivity() as? MainActivity)?.openHealthConnectSettings()
         }
 
+        binding.btnDiagnostics.setOnClickListener { showDiagnostics() }
+
         refreshValues()
         loadStepSources()
     }
@@ -175,6 +177,37 @@ class SettingsFragment : Fragment() {
                 dialog.dismiss()
             }
             .show()
+    }
+
+    /**
+     * Shows what Health Connect actually holds per data type, so a blank metric
+     * can be traced to the right cause rather than guessed at.
+     */
+    private fun showDiagnostics() {
+        if (!app.healthConnectManager.isAvailable()) {
+            Toast.makeText(requireContext(), R.string.health_connect_unavailable, Toast.LENGTH_LONG).show()
+            return
+        }
+        lifecycleScope.launch {
+            val report = app.healthConnectManager.diagnostics()
+            val text = report.joinToString("\n\n") { status ->
+                val detail = when {
+                    !status.granted -> getString(R.string.diagnostics_no_permission)
+                    status.recordCount == 0 -> getString(R.string.diagnostics_no_data)
+                    else -> getString(
+                        R.string.diagnostics_records,
+                        status.recordCount,
+                        status.sources.joinToString { appLabel(it) },
+                    )
+                }
+                "${status.label}\n  $detail"
+            }
+            MaterialAlertDialogBuilder(requireContext())
+                .setTitle(R.string.diagnostics_title)
+                .setMessage(text)
+                .setPositiveButton(R.string.action_done, null)
+                .show()
+        }
     }
 
     /** Human-readable app name, falling back to the package when it isn't installed. */

@@ -33,6 +33,9 @@ class MainActivity : AppCompatActivity() {
         val app = application as HealthTrackerApp
         val required = app.healthConnectManager.requiredPermissions
         if (granted.containsAll(required)) {
+            // A fresh grant may expose history that earlier reads couldn't see
+            SyncWorker.resetBackfill(this)
+            SyncWorker.runNow(this)
             Toast.makeText(this, "Health Connect permissions granted.", Toast.LENGTH_SHORT).show()
             val navHost = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as? NavHostFragment
             val dashboard = navHost?.childFragmentManager?.fragments?.firstOrNull { it is DashboardFragment } as? DashboardFragment

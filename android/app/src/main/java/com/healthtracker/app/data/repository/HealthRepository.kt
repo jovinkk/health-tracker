@@ -11,6 +11,7 @@ import com.healthtracker.app.data.remote.GeminiService
 import com.healthtracker.app.data.remote.HealthEntryRequest
 import com.healthtracker.app.data.remote.WearableSnapshotRequest
 import java.time.Instant
+import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
@@ -78,12 +79,27 @@ class HealthRepository(
 
     // ── Save wearable snapshot locally ─────────────────────────────────────────
 
-    suspend fun saveSnapshot(snapshot: WearableSnapshot) {
-        snapshotDao.insertAll(listOf(snapshot))
-    }
+    /**
+     * Writes one row per calendar day, replacing any earlier reading for that day.
+     *
+     * Every sync used to append a row, so a morning sync left a permanent
+     * low-step record. Downstream that reads as several distinct low-activity
+     * days — which is how unworn-tracker days ended up flagged as sedentary.
+     */
+    suspend fun saveSnapshot(snapshot: WearableSnapshot) = saveSnapshots(listOf(snapshot))
 
     suspend fun saveSnapshots(snapshots: List<WearableSnapshot>) {
-        if (snapshots.isNotEmpty()) snapshotDao.insertAll(snapshots)
+        if (snapshots.isEmpty()) return
+        val zone = ZoneId.systemDefault()
+        // Keep the richest reading per day in case a backfill and a live sync collide
+        snapshots
+            .groupBy { Instant.ofEpochMilli(it.timestamp).atZone(zone).toLocalDate() }
+            .forEach { (day, sameDay) ->
+                val start = day.atStartOfDay(zone).toInstant().toEpochMilli()
+                val end = day.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
+                snapshotDao.deleteForDay(start, end)
+                snapshotDao.insertAll(listOf(sameDay.maxBy { it.steps ?: -1 }))
+            }
     }
 
     // ── Sync unsynced data to backend ──────────────────────────────────────────

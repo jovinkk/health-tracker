@@ -76,6 +76,11 @@
     <string name="grant_health_permissions">Grant Health Connect permissions</string>
     <string name="open_health_connect">Open Health Connect settings</string>
     <string name="health_connect_unavailable">Health Connect is not available on this device.</string>
+    <string name="diagnostics">What data is available?</string>
+    <string name="diagnostics_title">Health Connect data (last 7 days)</string>
+    <string name="diagnostics_no_permission">permission not granted</string>
+    <string name="diagnostics_no_data">no app is writing this</string>
+    <string name="diagnostics_records">%1$d records — %2$s</string>
     <string name="settings_sync">Sync</string>
     <string name="sync_explanation">Syncs when you open the app and every 3 hours in the background.</string>
 

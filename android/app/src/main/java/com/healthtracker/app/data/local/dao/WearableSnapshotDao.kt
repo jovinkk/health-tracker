@@ -24,6 +24,10 @@ interface WearableSnapshotDao {
     @Query("SELECT * FROM wearable_snapshots WHERE timestamp >= :since ORDER BY timestamp ASC")
     fun observeSince(since: Long): LiveData<List<WearableSnapshot>>
 
+    /** Clears a day before writing a fresher reading, so one row represents one day. */
+    @Query("DELETE FROM wearable_snapshots WHERE timestamp >= :start AND timestamp < :end")
+    suspend fun deleteForDay(start: Long, end: Long)
+
     @Query("SELECT * FROM wearable_snapshots WHERE synced = 0")
     suspend fun getUnsynced(): List<WearableSnapshot>
 

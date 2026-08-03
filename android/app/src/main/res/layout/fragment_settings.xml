@@ -241,6 +241,13 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="@string/open_health_connect" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_diagnostics"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/diagnostics" />
                 </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>

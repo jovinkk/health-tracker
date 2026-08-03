@@ -27,8 +27,14 @@ class SyncWorker(
                 // One-off historical import. Guarded by a flag because walking a
                 // year of days is slow and only worth doing once.
                 if (!prefs.getBoolean(KEY_BACKFILLED, false)) {
-                    app.repository.saveSnapshots(health.readHistory())
-                    prefs.edit().putBoolean(KEY_BACKFILLED, true).apply()
+                    val history = health.readHistory()
+                    app.repository.saveSnapshots(history)
+                    // Only latch this off once something actually came back. An
+                    // empty result usually means history access wasn't granted
+                    // yet, and marking it done would disable backfill forever.
+                    if (history.isNotEmpty()) {
+                        prefs.edit().putBoolean(KEY_BACKFILLED, true).apply()
+                    }
                 }
                 app.repository.saveSnapshot(health.readTodaySnapshot())
             }
