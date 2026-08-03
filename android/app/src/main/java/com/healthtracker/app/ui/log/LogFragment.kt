@@ -11,8 +11,12 @@ import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.snackbar.Snackbar
 import com.google.gson.Gson
+import com.healthtracker.app.R
 import com.healthtracker.app.data.local.entity.HealthEntry
+import com.healthtracker.app.databinding.DialogEditEntryBinding
 import com.healthtracker.app.databinding.FragmentLogBinding
 import com.healthtracker.app.databinding.ItemLogEntryBinding
 import androidx.recyclerview.widget.RecyclerView
@@ -43,7 +47,55 @@ class LogFragment : Fragment() {
             holder.binding.textTime.text = dateFormat.format(Date(entry.timestamp))
             holder.binding.textScore.text = entry.numericValue?.let { "%.0f/10".format(it) } ?: ""
             holder.binding.textScore.visibility = if (entry.numericValue != null) View.VISIBLE else View.GONE
+            holder.binding.root.setOnClickListener { showEntryOptions(entry) }
         }
+    }
+
+    private fun showEntryOptions(entry: HealthEntry) {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(entry.entryType.replaceFirstChar { it.uppercase() })
+            .setItems(
+                arrayOf(getString(R.string.action_edit), getString(R.string.action_delete))
+            ) { _, which ->
+                if (which == 0) showEditDialog(entry) else confirmDelete(entry)
+            }
+            .show()
+    }
+
+    private fun showEditDialog(entry: HealthEntry) {
+        val dialogBinding = DialogEditEntryBinding.inflate(layoutInflater)
+        dialogBinding.editNote.setText(entry.rawInput.orEmpty())
+        dialogBinding.editScore.setText(entry.numericValue?.let { "%.0f".format(it) }.orEmpty())
+
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.edit_entry)
+            .setView(dialogBinding.root)
+            .setNegativeButton(R.string.action_cancel, null)
+            .setPositiveButton(R.string.action_save) { _, _ ->
+                val note = dialogBinding.editNote.text.toString().trim()
+                // Blank clears the score rather than being read as zero
+                val score = dialogBinding.editScore.text.toString().trim()
+                    .takeIf { it.isNotEmpty() }?.toFloatOrNull()?.coerceIn(0f, 10f)
+                viewModel.updateEntry(
+                    entry.copy(
+                        rawInput = note.ifBlank { null },
+                        numericValue = score,
+                    )
+                )
+            }
+            .show()
+    }
+
+    private fun confirmDelete(entry: HealthEntry) {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.delete_entry)
+            .setMessage(R.string.delete_entry_confirm)
+            .setNegativeButton(R.string.action_cancel, null)
+            .setPositiveButton(R.string.action_delete) { _, _ ->
+                viewModel.deleteEntry(entry)
+                Snackbar.make(binding.root, R.string.entry_deleted, Snackbar.LENGTH_SHORT).show()
+            }
+            .show()
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {

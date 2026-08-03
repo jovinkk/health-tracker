@@ -25,6 +25,9 @@ interface HealthEntryDao {
     @Query("SELECT * FROM health_entries WHERE timestamp >= :since ORDER BY timestamp DESC")
     suspend fun getSince(since: Long): List<HealthEntry>
 
+    @Update
+    suspend fun update(entry: HealthEntry)
+
     @Delete
     suspend fun delete(entry: HealthEntry)
 }

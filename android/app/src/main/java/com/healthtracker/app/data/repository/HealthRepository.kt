@@ -45,6 +45,37 @@ class HealthRepository(
         return entry.copy(id = id)
     }
 
+    // ── Edit / delete entries ──────────────────────────────────────────────────
+
+    /**
+     * Local store is the source of truth; the backend copy is best-effort, since
+     * an entry may not have been uploaded yet (serverId null) or the network may
+     * be down. Failed remote edits leave the entry marked unsynced to retry.
+     */
+    suspend fun updateEntry(entry: HealthEntry, token: String?) {
+        entryDao.update(entry.copy(synced = false))
+        val serverId = entry.serverId ?: return
+        if (token == null) return
+        runCatching {
+            apiService.updateEntry(
+                auth = "Bearer $token",
+                id = serverId,
+                patch = com.healthtracker.app.data.remote.HealthEntryPatch(
+                    rawInput = entry.rawInput,
+                    numericValue = entry.numericValue,
+                    subCategory = entry.subCategory,
+                ),
+            )
+        }.onSuccess { entryDao.update(entry.copy(synced = true)) }
+    }
+
+    suspend fun deleteEntry(entry: HealthEntry, token: String?) {
+        entryDao.delete(entry)
+        val serverId = entry.serverId ?: return
+        if (token == null) return
+        runCatching { apiService.deleteEntry("Bearer $token", serverId) }
+    }
+
     // ── Save wearable snapshot locally ─────────────────────────────────────────
 
     suspend fun saveSnapshot(snapshot: WearableSnapshot) {

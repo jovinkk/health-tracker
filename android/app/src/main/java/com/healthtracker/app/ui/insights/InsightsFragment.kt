@@ -15,6 +15,7 @@ import com.healthtracker.app.R
 import com.healthtracker.app.data.remote.PatternAlert
 import com.healthtracker.app.databinding.FragmentInsightsBinding
 import kotlinx.coroutines.launch
+import retrofit2.HttpException
 
 class InsightsFragment : Fragment() {
 
@@ -38,7 +39,7 @@ class InsightsFragment : Fragment() {
 
         if (token == null) {
             binding.textInsightsStatus.visibility = View.VISIBLE
-            binding.textInsightsStatus.text = "Log in first to see insights."
+            binding.textInsightsStatus.setText(R.string.insights_sign_in)
             return
         }
 
@@ -51,15 +52,26 @@ class InsightsFragment : Fragment() {
                 binding.progressInsights.visibility = View.GONE
                 if (alerts.isEmpty()) {
                     binding.textInsightsStatus.visibility = View.VISIBLE
-                    binding.textInsightsStatus.text = "No patterns detected. Keep logging data."
+                    binding.textInsightsStatus.setText(R.string.insights_empty)
                 } else {
                     binding.textInsightsStatus.visibility = View.GONE
                     alerts.forEach { addAlertCard(it) }
                 }
+            } catch (e: HttpException) {
+                // A 401 already triggers the session interceptor, which signs the
+                // user out; anything else is worth naming on screen.
+                binding.progressInsights.visibility = View.GONE
+                binding.textInsightsStatus.visibility = View.VISIBLE
+                binding.textInsightsStatus.text = if (e.code() == 401) {
+                    getString(R.string.session_expired)
+                } else {
+                    getString(R.string.insights_error, e.message())
+                }
             } catch (e: Exception) {
                 binding.progressInsights.visibility = View.GONE
                 binding.textInsightsStatus.visibility = View.VISIBLE
-                binding.textInsightsStatus.text = "Error loading insights: ${e.message}"
+                binding.textInsightsStatus.text =
+                    getString(R.string.insights_error, e.message ?: "network error")
             }
         }
     }

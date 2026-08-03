@@ -1,7 +1,9 @@
 package com.healthtracker.app.data.remote
 
+import android.content.Context
 import com.healthtracker.app.BuildConfig
 import com.google.gson.annotations.SerializedName
+import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -30,6 +32,13 @@ data class HealthEntryRequest(
     @SerializedName("numeric_value") val numericValue: Float?,
     @SerializedName("sub_category") val subCategory: String?,
     val source: String,
+)
+
+/** Only the fields the backend's PATCH accepts; nulls are omitted by Gson. */
+data class HealthEntryPatch(
+    @SerializedName("raw_input") val rawInput: String? = null,
+    @SerializedName("numeric_value") val numericValue: Float? = null,
+    @SerializedName("sub_category") val subCategory: String? = null,
 )
 
 data class HealthEntryResponse(
@@ -89,6 +98,19 @@ interface ApiService {
         @Body entry: HealthEntryRequest,
     ): HealthEntryResponse
 
+    @PATCH("entries/{id}")
+    suspend fun updateEntry(
+        @Header("Authorization") auth: String,
+        @Path("id") id: Long,
+        @Body patch: HealthEntryPatch,
+    ): HealthEntryResponse
+
+    @DELETE("entries/{id}")
+    suspend fun deleteEntry(
+        @Header("Authorization") auth: String,
+        @Path("id") id: Long,
+    )
+
     @POST("wearable/batch")
     suspend fun uploadWearableBatch(
         @Header("Authorization") auth: String,
@@ -102,15 +124,28 @@ interface ApiService {
     ): List<PatternAlert>
 
     companion object {
-        fun create(): ApiService {
+        fun create(context: Context): ApiService {
             val logging = HttpLoggingInterceptor().apply {
                 level = HttpLoggingInterceptor.Level.BODY
+            }
+
+            // A 401 on a normal call means the stored token no longer resolves to a
+            // user, so drop it and bounce to sign-in rather than surfacing a raw
+            // HTTP code on whichever screen happened to make the request.
+            val sessionInterceptor = Interceptor { chain ->
+                val response = chain.proceed(chain.request())
+                val isAuthCall = chain.request().url.encodedPath.startsWith("/auth/")
+                if (response.code == 401 && !isAuthCall) {
+                    SessionExpiry.handle(context)
+                }
+                response
             }
             // The backend runs on a free Render instance that sleeps after ~15
             // minutes idle and takes up to a minute to wake, so the 10s OkHttp
             // defaults would time out on the first request every time.
             val client = OkHttpClient.Builder()
                 .addInterceptor(logging)
+                .addInterceptor(sessionInterceptor)
                 .connectTimeout(30, TimeUnit.SECONDS)
                 .readTimeout(90, TimeUnit.SECONDS)
                 .writeTimeout(30, TimeUnit.SECONDS)

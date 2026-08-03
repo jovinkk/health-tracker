@@ -29,20 +29,47 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
 
-                <TextView
+                <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Today"
-                    android:textSize="28sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/text_primary"
-                    android:layout_marginBottom="2dp" />
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <ImageButton
+                        android:id="@+id/btn_prev_day"
+                        android:layout_width="34dp"
+                        android:layout_height="34dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:src="@drawable/ic_chevron_left"
+                        android:contentDescription="Previous day"
+                        android:layout_marginStart="-6dp" />
+
+                    <TextView
+                        android:id="@+id/text_date"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/today"
+                        android:textSize="26sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/text_primary"
+                        android:background="?attr/selectableItemBackground"
+                        android:paddingStart="4dp"
+                        android:paddingEnd="4dp" />
+
+                    <ImageButton
+                        android:id="@+id/btn_next_day"
+                        android:layout_width="34dp"
+                        android:layout_height="34dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:src="@drawable/ic_chevron_right"
+                        android:contentDescription="Next day" />
+                </LinearLayout>
 
                 <TextView
                     android:id="@+id/text_last_sync"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Last sync: —"
+                    android:text="@string/last_sync_never"
                     android:textSize="13sp"
                     android:textColor="@color/text_secondary" />
             </LinearLayout>

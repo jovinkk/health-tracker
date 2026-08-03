@@ -15,6 +15,11 @@
         android:label="Log" />
 
     <fragment
+        android:id="@+id/trendsFragment"
+        android:name="com.healthtracker.app.ui.trends.TrendsFragment"
+        android:label="@string/trends" />
+
+    <fragment
         android:id="@+id/insightsFragment"
         android:name="com.healthtracker.app.ui.insights.InsightsFragment"
         android:label="Insights" />

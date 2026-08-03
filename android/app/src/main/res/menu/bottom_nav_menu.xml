@@ -3,7 +3,11 @@
     <item
         android:id="@+id/dashboardFragment"
         android:icon="@android:drawable/ic_menu_today"
-        android:title="Today" />
+        android:title="@string/today" />
+    <item
+        android:id="@+id/trendsFragment"
+        android:icon="@android:drawable/ic_menu_sort_by_size"
+        android:title="@string/trends" />
     <item
         android:id="@+id/logFragment"
         android:icon="@android:drawable/ic_menu_add"
@@ -11,9 +15,9 @@
     <item
         android:id="@+id/insightsFragment"
         android:icon="@android:drawable/ic_menu_info_details"
-        android:title="Insights" />
+        android:title="@string/insights" />
     <item
         android:id="@+id/settingsFragment"
         android:icon="@android:drawable/ic_menu_preferences"
-        android:title="Settings" />
+        android:title="@string/settings" />
 </menu>

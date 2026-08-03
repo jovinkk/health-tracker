@@ -4,7 +4,10 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/background"
-    android:padding="16dp">
+    android:paddingStart="16dp"
+    android:paddingEnd="16dp"
+    android:paddingTop="20dp"
+    android:paddingBottom="24dp">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -14,79 +17,257 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Settings"
-            android:textSize="22sp"
+            android:text="@string/settings"
+            android:textSize="30sp"
             android:textStyle="bold"
             android:textColor="@color/text_primary"
-            android:layout_marginBottom="4dp" />
+            android:layout_marginBottom="20dp" />
 
+        <!-- ── Account ────────────────────────────────────────────────────── -->
         <TextView
-            android:id="@+id/text_status"
+            style="@style/TextAppearance.HealthTracker.SectionLabel"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Not logged in"
-            android:textSize="13sp"
-            android:layout_marginBottom="24dp" />
+            android:text="@string/settings_account"
+            android:layout_marginStart="4dp"
+            android:layout_marginBottom="8dp" />
 
+        <com.google.android.material.card.MaterialCardView
+            style="@style/Widget.HealthTracker.Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="20dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:id="@+id/text_status"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/not_logged_in"
+                    android:textSize="15sp"
+                    android:textColor="@color/text_primary" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_logout"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/logout"
+                    android:layout_marginTop="12dp"
+                    app:cornerRadius="12dp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- ── Appearance ─────────────────────────────────────────────────── -->
         <TextView
+            style="@style/TextAppearance.HealthTracker.SectionLabel"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="ACCOUNT"
-            android:textSize="11sp"
-            android:textColor="@color/text_secondary"
-            android:letterSpacing="0.1"
+            android:text="@string/settings_appearance"
+            android:layout_marginStart="4dp"
             android:layout_marginBottom="8dp" />
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_logout"
-            style="@style/Widget.Material3.Button.OutlinedButton"
+        <com.google.android.material.card.MaterialCardView
+            style="@style/Widget.HealthTracker.Card"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Logout"
-            app:cornerRadius="12dp"
-            android:layout_marginBottom="24dp" />
+            android:layout_marginBottom="20dp">
 
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <LinearLayout
+                    android:id="@+id/row_theme"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="?attr/selectableItemBackground"
+                    android:padding="16dp">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/settings_theme"
+                        android:textSize="15sp"
+                        android:textColor="@color/text_primary" />
+                    <TextView
+                        android:id="@+id/text_theme_value"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textSize="13sp"
+                        android:textColor="@color/text_secondary" />
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/outline" />
+
+                <LinearLayout
+                    android:id="@+id/row_language"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="?attr/selectableItemBackground"
+                    android:padding="16dp">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/settings_language"
+                        android:textSize="15sp"
+                        android:textColor="@color/text_primary" />
+                    <TextView
+                        android:id="@+id/text_language_value"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textSize="13sp"
+                        android:textColor="@color/text_secondary" />
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/outline" />
+
+                <LinearLayout
+                    android:id="@+id/row_units"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="?attr/selectableItemBackground"
+                    android:padding="16dp">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/settings_units"
+                        android:textSize="15sp"
+                        android:textColor="@color/text_primary" />
+                    <TextView
+                        android:id="@+id/text_units_value"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textSize="13sp"
+                        android:textColor="@color/text_secondary" />
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- ── Health data ────────────────────────────────────────────────── -->
         <TextView
+            style="@style/TextAppearance.HealthTracker.SectionLabel"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="HEALTH DATA"
-            android:textSize="11sp"
-            android:textColor="@color/text_secondary"
-            android:letterSpacing="0.1"
+            android:text="@string/settings_health_data"
+            android:layout_marginStart="4dp"
             android:layout_marginBottom="8dp" />
 
+        <com.google.android.material.card.MaterialCardView
+            style="@style/Widget.HealthTracker.Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="20dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <LinearLayout
+                    android:id="@+id/row_step_source"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="?attr/selectableItemBackground"
+                    android:padding="16dp">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/settings_step_source"
+                        android:textSize="15sp"
+                        android:textColor="@color/text_primary" />
+                    <TextView
+                        android:id="@+id/text_step_source_value"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textSize="13sp"
+                        android:textColor="@color/text_secondary" />
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/step_source_help"
+                        android:textSize="12sp"
+                        android:lineSpacingMultiplier="1.25"
+                        android:textColor="@color/text_secondary"
+                        android:layout_marginTop="6dp" />
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/outline" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_setup_help"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/setup_help"
+                        app:cornerRadius="12dp"
+                        android:layout_marginBottom="8dp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_grant_health"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/grant_health_permissions"
+                        app:cornerRadius="12dp"
+                        android:layout_marginBottom="4dp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_open_health_settings"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/open_health_connect" />
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- ── Sync ───────────────────────────────────────────────────────── -->
         <TextView
-            android:layout_width="match_parent"
+            style="@style/TextAppearance.HealthTracker.SectionLabel"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textSize="13sp"
-            android:textColor="@color/text_secondary"
-            android:lineSpacingMultiplier="1.3"
-            android:layout_marginBottom="12dp"
-            android:text="HealthTracker reads data your fitness app shares with Health Connect. If your metrics show zero, that app probably isn't sharing yet." />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_setup_help"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Setup help"
-            app:cornerRadius="12dp"
+            android:text="@string/settings_sync"
+            android:layout_marginStart="4dp"
             android:layout_marginBottom="8dp" />
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_grant_health"
-            style="@style/Widget.Material3.Button.OutlinedButton"
+        <com.google.android.material.card.MaterialCardView
+            style="@style/Widget.HealthTracker.Card"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Grant Health Connect Permissions"
-            app:cornerRadius="12dp"
-            android:layout_marginBottom="8dp" />
+            android:layout_height="wrap_content">
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_open_health_settings"
-            style="@style/Widget.Material3.Button.TextButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Open Health Connect settings" />
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/sync_explanation"
+                android:textSize="13sp"
+                android:lineSpacingMultiplier="1.3"
+                android:textColor="@color/text_secondary"
+                android:padding="16dp" />
+        </com.google.android.material.card.MaterialCardView>
 
     </LinearLayout>
 </ScrollView>

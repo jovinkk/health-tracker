@@ -1,5 +1,6 @@
 package com.healthtracker.app.ui.dashboard
 
+import android.app.DatePickerDialog
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -14,8 +15,11 @@ import com.healthtracker.app.HealthTrackerApp
 import com.healthtracker.app.MainActivity
 import com.healthtracker.app.databinding.FragmentDashboardBinding
 import com.healthtracker.app.ui.setup.SetupActivity
+import com.healthtracker.app.R
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import java.util.*
 
 class DashboardFragment : Fragment() {
@@ -36,12 +40,27 @@ class DashboardFragment : Fragment() {
             startActivity(Intent(requireContext(), SetupActivity::class.java))
         }
 
-        viewModel.latestSnapshot.observe(viewLifecycleOwner) { snap ->
+        binding.btnPrevDay.setOnClickListener { viewModel.shiftDay(-1) }
+        binding.btnNextDay.setOnClickListener { viewModel.shiftDay(1) }
+        binding.textDate.setOnClickListener { showDatePicker() }
+
+        viewModel.selectedDate.observe(viewLifecycleOwner) { date ->
+            binding.textDate.text = labelFor(date)
+            // Future days hold nothing, so stop paging forward at today
+            binding.btnNextDay.isEnabled = date.isBefore(LocalDate.now())
+            binding.btnNextDay.alpha = if (binding.btnNextDay.isEnabled) 1f else 0.3f
+        }
+
+        viewModel.snapshot.observe(viewLifecycleOwner) { snap ->
             if (snap == null) {
-                binding.textNoData.text =
-                    "No wearable data yet.\nTap here for help connecting your fitness app."
+                binding.textNoData.text = if (viewModel.isToday) {
+                    getString(R.string.no_data_help)
+                } else {
+                    getString(R.string.no_data_title)
+                }
                 binding.cardNoData.visibility = View.VISIBLE
                 binding.metricsGroup.visibility = View.GONE
+                binding.textLastSync.text = getString(R.string.last_sync_never)
                 return@observe
             }
             // A snapshot that read nothing means Health Connect is reachable but the
@@ -51,8 +70,7 @@ class DashboardFragment : Fragment() {
                 snap.sleepDurationMin, snap.spo2Pct, snap.caloriesActive,
             ).isNotEmpty()
             if (!hasAnything) {
-                binding.textNoData.text =
-                    "Synced, but your fitness app isn't sharing any data with Health Connect yet.\nTap here for setup help."
+                binding.textNoData.text = getString(R.string.no_data_not_sharing)
             }
             binding.cardNoData.visibility = if (hasAnything) View.GONE else View.VISIBLE
             binding.metricsGroup.visibility = View.VISIBLE
@@ -65,8 +83,10 @@ class DashboardFragment : Fragment() {
             binding.textCalories.text = snap.caloriesActive?.let { "%.0f".format(it) } ?: "—"
             binding.textRestingHr.text = snap.heartRateResting?.let { "%.0f".format(it) } ?: "—"
 
-            val date = Date(snap.timestamp)
-            binding.textLastSync.text = "Last sync: ${SimpleDateFormat("MMM d, HH:mm", Locale.getDefault()).format(date)}"
+            binding.textLastSync.text = getString(
+                R.string.last_sync,
+                SimpleDateFormat("MMM d, HH:mm", Locale.getDefault()).format(Date(snap.timestamp)),
+            )
         }
 
         viewModel.syncState.observe(viewLifecycleOwner) { state ->
@@ -146,6 +166,30 @@ class DashboardFragment : Fragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
+    }
+
+    private fun labelFor(date: LocalDate): String = when (date) {
+        LocalDate.now() -> getString(R.string.today)
+        LocalDate.now().minusDays(1) -> getString(R.string.yesterday)
+        else -> date.format(
+            DateTimeFormatter.ofPattern(
+                if (date.year == LocalDate.now().year) "d MMM" else "d MMM yyyy",
+                Locale.getDefault(),
+            )
+        )
+    }
+
+    private fun showDatePicker() {
+        val current = viewModel.selectedDate.value ?: LocalDate.now()
+        DatePickerDialog(
+            requireContext(),
+            { _, year, month, day -> viewModel.selectDate(LocalDate.of(year, month + 1, day)) },
+            current.year,
+            current.monthValue - 1,
+            current.dayOfMonth,
+        ).apply {
+            datePicker.maxDate = System.currentTimeMillis()
+        }.show()
     }
 
     companion object {

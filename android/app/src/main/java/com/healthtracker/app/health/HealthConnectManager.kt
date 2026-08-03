@@ -4,18 +4,35 @@ import android.content.Context
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.*
+import androidx.health.connect.client.records.metadata.DataOrigin
 import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import com.healthtracker.app.data.local.entity.WearableSnapshot
+import com.healthtracker.app.settings.AppSettings
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 
-class HealthConnectManager(private val context: Context) {
+class HealthConnectManager(
+    private val context: Context,
+    private val settings: AppSettings,
+) {
 
     private val client by lazy { HealthConnectClient.getOrCreate(context) }
+
+    /**
+     * Restricts aggregation to one writing app when the user has pinned a source.
+     *
+     * Health Connect only de-duplicates overlapping records where its own app
+     * priority list resolves them; with a watch app and a phone pedometer both
+     * writing steps for the same hours and no priority set, aggregate() returns
+     * the sum of both. Pinning a source is the dependable way to match what the
+     * source app itself reports.
+     */
+    private fun originFilter(): Set<DataOrigin> =
+        settings.stepSourcePackage?.let { setOf(DataOrigin(it)) } ?: emptySet()
 
     val requiredPermissions = setOf(
         HealthPermission.getReadPermission(StepsRecord::class),
@@ -48,12 +65,21 @@ class HealthConnectManager(private val context: Context) {
     suspend fun hasHistoryPermission(): Boolean =
         client.permissionController.getGrantedPermissions().contains(historyPermission)
 
-    /** Apps that have written step data, for showing the user where numbers come from. */
-    suspend fun stepDataSources(): Set<String> = runCatching {
-        val range = TimeRangeFilter.between(Instant.now().minus(7, ChronoUnit.DAYS), Instant.now())
+    /**
+     * Apps that have written step data recently, with the step count each one
+     * claims, so the user can see which source matches their watch app.
+     */
+    suspend fun stepDataSources(): List<StepSource> = runCatching {
+        val end = Instant.now()
+        val range = TimeRangeFilter.between(end.minus(7, ChronoUnit.DAYS), end)
         client.readRecords(ReadRecordsRequest(StepsRecord::class, range))
-            .records.map { it.metadata.dataOrigin.packageName }.toSet()
-    }.getOrDefault(emptySet())
+            .records
+            .groupBy { it.metadata.dataOrigin.packageName }
+            .map { (pkg, records) -> StepSource(pkg, records.sumOf { it.count }) }
+            .sortedByDescending { it.stepsLast7Days }
+    }.getOrDefault(emptyList())
+
+    data class StepSource(val packageName: String, val stepsLast7Days: Long)
 
     suspend fun readTodaySnapshot(): WearableSnapshot = readDaySnapshot(LocalDate.now())
 
@@ -85,6 +111,7 @@ class HealthConnectManager(private val context: Context) {
                         TotalCaloriesBurnedRecord.ENERGY_TOTAL,
                     ),
                     timeRangeFilter = range,
+                    dataOriginFilter = originFilter(),
                 )
             )
         }.getOrNull()

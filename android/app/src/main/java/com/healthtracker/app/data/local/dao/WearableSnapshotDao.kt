@@ -16,6 +16,14 @@ interface WearableSnapshotDao {
     @Query("SELECT * FROM wearable_snapshots WHERE timestamp >= :since ORDER BY timestamp DESC")
     suspend fun getSince(since: Long): List<WearableSnapshot>
 
+    /** Latest snapshot falling inside a single day, for browsing history. */
+    @Query("SELECT * FROM wearable_snapshots WHERE timestamp >= :start AND timestamp < :end ORDER BY timestamp DESC LIMIT 1")
+    fun observeForDay(start: Long, end: Long): LiveData<WearableSnapshot?>
+
+    /** Ascending series for trend charts. */
+    @Query("SELECT * FROM wearable_snapshots WHERE timestamp >= :since ORDER BY timestamp ASC")
+    fun observeSince(since: Long): LiveData<List<WearableSnapshot>>
+
     @Query("SELECT * FROM wearable_snapshots WHERE synced = 0")
     suspend fun getUnsynced(): List<WearableSnapshot>
 

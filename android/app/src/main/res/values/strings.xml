@@ -1,4 +1,105 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  All user-facing text lives here. Adding a language means dropping in a
+  values-<lang>/strings.xml alongside this file — no code changes needed.
+-->
 <resources>
     <string name="app_name">HealthTracker</string>
+
+    <!-- Common actions -->
+    <string name="action_save">Save</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_edit">Edit</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_done">Done</string>
+
+    <!-- Log entries -->
+    <string name="edit_entry">Edit entry</string>
+    <string name="delete_entry">Delete entry?</string>
+    <string name="delete_entry_confirm">This removes the entry from this device and your account.</string>
+    <string name="entry_deleted">Entry deleted</string>
+    <string name="entry_note">Note</string>
+    <string name="entry_score">Score</string>
+    <string name="entry_score_helper">0–10, leave blank for none</string>
+
+    <!-- Dashboard -->
+    <string name="today">Today</string>
+    <string name="yesterday">Yesterday</string>
+    <string name="sync_now">Sync now</string>
+    <string name="last_sync">Last sync: %1$s</string>
+    <string name="last_sync_never">Not synced yet</string>
+    <string name="no_data_title">No wearable data yet</string>
+    <string name="no_data_help">Tap here for help connecting your fitness app.</string>
+    <string name="no_data_not_sharing">Synced, but your fitness app isn\'t sharing data with Health Connect yet. Tap for setup help.</string>
+
+    <!-- Metrics -->
+    <string name="metric_steps">Steps</string>
+    <string name="metric_heart_rate">Heart rate</string>
+    <string name="metric_resting_hr">Resting HR</string>
+    <string name="metric_hrv">HRV</string>
+    <string name="metric_spo2">Blood oxygen</string>
+    <string name="metric_sleep">Sleep</string>
+    <string name="metric_calories">Active calories</string>
+
+    <!-- Trends -->
+    <string name="trends">Trends</string>
+    <string name="range_7_days">7 days</string>
+    <string name="range_30_days">30 days</string>
+    <string name="range_90_days">90 days</string>
+    <string name="trends_empty">Not enough history yet. Data appears as it syncs.</string>
+    <string name="trend_average">Average %1$s</string>
+
+    <!-- Settings -->
+    <string name="settings">Settings</string>
+    <string name="settings_appearance">Appearance</string>
+    <string name="settings_theme">Theme</string>
+    <string name="theme_system">Follow system</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="settings_units">Units</string>
+    <string name="units_metric">Metric (km, kg, °C)</string>
+    <string name="units_imperial">Imperial (mi, lb, °F)</string>
+    <string name="settings_language">Language</string>
+    <string name="language_system">Follow system</string>
+    <string name="settings_health_data">Health data</string>
+    <string name="settings_step_source">Step data source</string>
+    <string name="step_source_all">All apps (de-duplicated)</string>
+    <string name="step_source_help">Pick one app if your step count looks too high — that usually means your phone and your watch are both being counted.</string>
+    <string name="step_source_none">No app has written step data in the last 7 days.</string>
+    <string name="steps_last_7_days">%1$,d steps in last 7 days</string>
+    <string name="settings_account">Account</string>
+    <string name="logged_in_as">Signed in as %1$s</string>
+    <string name="not_logged_in">Not signed in</string>
+    <string name="logout">Log out</string>
+    <string name="logged_out">Logged out</string>
+    <string name="setup_help">Setup help</string>
+    <string name="grant_health_permissions">Grant Health Connect permissions</string>
+    <string name="open_health_connect">Open Health Connect settings</string>
+    <string name="health_connect_unavailable">Health Connect is not available on this device.</string>
+    <string name="settings_sync">Sync</string>
+    <string name="sync_explanation">Syncs when you open the app and every 3 hours in the background.</string>
+
+    <!-- Auth -->
+    <string name="sign_in">Sign In</string>
+    <string name="create_account">Create Account</string>
+    <string name="sign_in_subtitle">Sign in to continue</string>
+    <string name="sign_up_subtitle">Create a new account</string>
+    <string name="switch_to_sign_up">No account? Create one</string>
+    <string name="switch_to_sign_in">Already have an account? Sign in</string>
+    <string name="username">Username</string>
+    <string name="password">Password</string>
+    <string name="enter_credentials">Enter a username and password</string>
+    <string name="incorrect_credentials">Incorrect username or password</string>
+    <string name="username_taken">That username is already taken</string>
+    <string name="account_created">Account created</string>
+    <string name="signing_in_slow">Signing in… server may take up to a minute to wake</string>
+    <string name="creating_account_slow">Creating account… server may take up to a minute to wake</string>
+    <string name="session_expired">Session expired — please sign in again</string>
+
+    <!-- Insights -->
+    <string name="insights">Insights</string>
+    <string name="insights_empty">No patterns detected yet. Keep logging data.</string>
+    <string name="insights_error">Couldn\'t load insights: %1$s</string>
+    <string name="insights_sign_in">Sign in to see insights.</string>
+    <string name="refresh">Refresh</string>
 </resources>

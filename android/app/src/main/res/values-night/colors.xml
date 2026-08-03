@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Dark palette; names mirror values/colors.xml exactly. -->
+<resources>
+    <color name="background">#0E1016</color>
+    <color name="surface">#181B24</color>
+    <color name="surface_variant">#222634</color>
+    <color name="outline">#2E3444</color>
+    <color name="text_primary">#E6EAF2</color>
+    <color name="text_secondary">#98A1B4</color>
+    <color name="accent">#8B92F8</color>
+    <color name="accent_container">#2A2C50</color>
+    <color name="accent_green">#34D399</color>
+    <color name="accent_red">#FB7185</color>
+    <color name="accent_yellow">#FBBF24</color>
+    <color name="accent_blue">#38BDF8</color>
+    <color name="accent_purple">#A78BFA</color>
+    <color name="ic_launcher_background">#4F46E5</color>
+</resources>

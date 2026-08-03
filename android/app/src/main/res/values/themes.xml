@@ -1,23 +1,59 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <style name="Theme.HealthTracker" parent="Theme.Material3.Dark">
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <!--
+      DayNight so the light/dark preference in Settings actually takes effect.
+      Dynamic colour is applied at runtime in HealthTrackerApp where supported,
+      which overrides colorPrimary with the wallpaper-derived palette.
+    -->
+    <style name="Theme.HealthTracker" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="colorPrimary">@color/accent</item>
-        <item name="colorOnPrimary">@color/text_primary</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorPrimaryContainer">@color/accent_container</item>
+        <item name="colorOnPrimaryContainer">@color/text_primary</item>
+        <item name="colorSecondary">@color/accent</item>
         <item name="colorSurface">@color/surface</item>
         <item name="colorOnSurface">@color/text_primary</item>
+        <item name="colorSurfaceVariant">@color/surface_variant</item>
+        <item name="colorOnSurfaceVariant">@color/text_secondary</item>
+        <item name="colorOutline">@color/outline</item>
+        <item name="colorError">@color/accent_red</item>
         <item name="android:colorBackground">@color/background</item>
         <item name="android:windowBackground">@color/background</item>
-        <!-- Edge-to-edge: system bars are transparent, drawn over our background -->
+
+        <!-- Edge-to-edge: system bars transparent, drawn over our background -->
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
-        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">true</item>
     </style>
 
-    <style name="Theme.HealthTracker.Transparent" parent="Theme.HealthTracker">
+    <style name="Theme.HealthTracker.Transparent">
         <item name="android:windowIsTranslucent">true</item>
         <item name="android:windowBackground">@android:color/transparent</item>
         <item name="android:windowContentOverlay">@null</item>
         <item name="android:windowNoTitle">true</item>
         <item name="android:backgroundDimEnabled">true</item>
+    </style>
+
+    <!-- Metric cards: consistent elevation-free surface with a hairline outline -->
+    <style name="Widget.HealthTracker.Card" parent="Widget.Material3.CardView.Outlined">
+        <item name="cardBackgroundColor">@color/surface</item>
+        <item name="cardCornerRadius">20dp</item>
+        <item name="cardElevation">0dp</item>
+        <item name="strokeColor">@color/outline</item>
+        <item name="strokeWidth">1dp</item>
+    </style>
+
+    <style name="TextAppearance.HealthTracker.SectionLabel" parent="TextAppearance.Material3.LabelSmall">
+        <item name="android:textColor">@color/text_secondary</item>
+        <item name="android:letterSpacing">0.09</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:textSize">11sp</item>
+    </style>
+
+    <style name="TextAppearance.HealthTracker.MetricValue" parent="TextAppearance.Material3.HeadlineSmall">
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textStyle">bold</item>
     </style>
 </resources>

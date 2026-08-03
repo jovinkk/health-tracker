@@ -1,13 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Light palette. The dark equivalents live in values-night/colors.xml under the
+  same names, so layouts reference semantic roles and never a literal colour.
+-->
 <resources>
-    <color name="background">#0F1117</color>
-    <color name="surface">#1A1D27</color>
-    <color name="outline">#2D3348</color>
-    <color name="text_primary">#E2E8F0</color>
-    <color name="text_secondary">#64748B</color>
-    <color name="accent">#6366F1</color>
-    <color name="accent_green">#10B981</color>
-    <color name="accent_red">#F43F5E</color>
-    <color name="accent_yellow">#F59E0B</color>
-    <color name="ic_launcher_background">#6366F1</color>
+    <color name="background">#F7F8FC</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="surface_variant">#EEF1F8</color>
+    <color name="outline">#DFE3ED</color>
+    <color name="text_primary">#11141C</color>
+    <color name="text_secondary">#5B6376</color>
+    <color name="accent">#4F46E5</color>
+    <color name="accent_container">#E5E4FB</color>
+    <color name="accent_green">#0E9F6E</color>
+    <color name="accent_red">#E11D48</color>
+    <color name="accent_yellow">#D97706</color>
+    <color name="accent_blue">#0284C7</color>
+    <color name="accent_purple">#7C3AED</color>
+    <color name="ic_launcher_background">#4F46E5</color>
 </resources>
