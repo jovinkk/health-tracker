@@ -43,6 +43,10 @@ class SettingsFragment : Fragment() {
         binding.btnGrantHealth.setOnClickListener {
             requestHealthPermissions()
         }
+
+        binding.btnOpenHealthSettings.setOnClickListener {
+            (requireActivity() as? com.healthtracker.app.MainActivity)?.openHealthConnectSettings()
+        }
     }
 
     private fun requestHealthPermissions() {

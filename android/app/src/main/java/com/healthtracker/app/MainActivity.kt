@@ -1,11 +1,14 @@
 package com.healthtracker.app
 
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.PermissionController
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -35,12 +38,28 @@ class MainActivity : AppCompatActivity() {
             val dashboard = navHost?.childFragmentManager?.fragments?.firstOrNull { it is DashboardFragment } as? DashboardFragment
             dashboard?.onHealthPermissionsGranted()
         } else {
+            // Health Connect stops showing its prompt after repeated denials, so a
+            // silent all-denied result needs a manual route into its settings.
             val denied = required - granted
-            Toast.makeText(
-                this,
-                "${denied.size} permission(s) denied. Some data may be unavailable.",
-                Toast.LENGTH_LONG,
-            ).show()
+            AlertDialog.Builder(this)
+                .setTitle("Health Connect permissions needed")
+                .setMessage(
+                    "${denied.size} of ${required.size} permission(s) were not granted.\n\n" +
+                        "If no permission screen appeared, Health Connect may have stopped " +
+                        "prompting. You can grant them directly under " +
+                        "App permissions → HealthTracker."
+                )
+                .setPositiveButton("Open Health Connect") { _, _ -> openHealthConnectSettings() }
+                .setNegativeButton("Not now", null)
+                .show()
+        }
+    }
+
+    fun openHealthConnectSettings() {
+        try {
+            startActivity(Intent(HealthConnectClient.ACTION_HEALTH_CONNECT_SETTINGS))
+        } catch (_: ActivityNotFoundException) {
+            Toast.makeText(this, "Could not open Health Connect settings.", Toast.LENGTH_LONG).show()
         }
     }
 

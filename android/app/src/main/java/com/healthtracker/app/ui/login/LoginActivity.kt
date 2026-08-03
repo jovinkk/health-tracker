@@ -25,6 +25,9 @@ import retrofit2.HttpException
 class LoginActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityLoginBinding
+    private var mode = Mode.SIGN_IN
+
+    private enum class Mode { SIGN_IN, SIGN_UP }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
@@ -45,35 +48,66 @@ class LoginActivity : AppCompatActivity() {
         }
 
         binding.editUsername.setText(prefs().getString("username", ""))
+        applyMode()
 
-        binding.btnLogin.setOnClickListener {
+        binding.btnSwitchMode.setOnClickListener {
+            mode = if (mode == Mode.SIGN_IN) Mode.SIGN_UP else Mode.SIGN_IN
+            setStatus("", android.R.color.transparent)
+            applyMode()
+        }
+
+        binding.btnSubmit.setOnClickListener {
             val username = binding.editUsername.text.toString().trim()
             val password = binding.editPassword.text.toString()
             if (username.isBlank() || password.isBlank()) {
                 setStatus("Enter a username and password", android.R.color.holo_orange_dark)
                 return@setOnClickListener
             }
-            signIn(username, password)
+            when (mode) {
+                Mode.SIGN_IN -> signIn(username, password)
+                Mode.SIGN_UP -> signUp(username, password)
+            }
         }
     }
 
+    private fun applyMode() {
+        val signIn = mode == Mode.SIGN_IN
+        binding.textSubtitle.text = if (signIn) "Sign in to continue" else "Create a new account"
+        binding.btnSubmit.text = if (signIn) "Sign In" else "Create Account"
+        binding.btnSwitchMode.text =
+            if (signIn) "No account? Create one" else "Already have an account? Sign in"
+    }
+
     private fun signIn(username: String, password: String) {
-        val app = application as HealthTrackerApp
         lifecycleScope.launch {
             setBusy(true)
             try {
                 if (authenticate(username, password)) {
                     goToMain()
-                    return@launch
+                } else {
+                    setStatus("Incorrect username or password", android.R.color.holo_red_dark)
                 }
-                // Login 401s for both "no such account" and "wrong password", so
-                // try creating the account — a 400 back means it already existed
-                // and the password was simply wrong.
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                setStatus("Sign-in failed: ${e.message}", android.R.color.holo_red_dark)
+            } finally {
+                setBusy(false)
+            }
+        }
+    }
+
+    private fun signUp(username: String, password: String) {
+        val app = application as HealthTrackerApp
+        lifecycleScope.launch {
+            setBusy(true)
+            try {
                 try {
                     app.apiService.register(CredentialsRequest(username, password))
                 } catch (e: HttpException) {
                     setStatus(
-                        if (e.code() == 400) "Incorrect password" else "Registration failed: ${e.message}",
+                        if (e.code() == 400) "That username is already taken"
+                        else "Could not create account: ${e.message}",
                         android.R.color.holo_red_dark,
                     )
                     return@launch
@@ -87,7 +121,7 @@ class LoginActivity : AppCompatActivity() {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                setStatus("Sign-in failed: ${e.message}", android.R.color.holo_red_dark)
+                setStatus("Could not create account: ${e.message}", android.R.color.holo_red_dark)
             } finally {
                 setBusy(false)
             }
@@ -111,9 +145,11 @@ class LoginActivity : AppCompatActivity() {
     }
 
     private fun setBusy(busy: Boolean) {
-        binding.btnLogin.isEnabled = !busy
+        binding.btnSubmit.isEnabled = !busy
+        binding.btnSwitchMode.isEnabled = !busy
         if (busy) {
-            setStatus("Signing in… server may take up to a minute to wake", android.R.color.holo_orange_dark)
+            val verb = if (mode == Mode.SIGN_IN) "Signing in" else "Creating account"
+            setStatus("$verb… server may take up to a minute to wake", android.R.color.holo_orange_dark)
         }
     }
 
